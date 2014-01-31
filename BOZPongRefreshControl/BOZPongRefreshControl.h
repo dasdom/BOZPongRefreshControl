@@ -95,4 +95,10 @@
  */
 @property (nonatomic) CGFloat totalHorizontalTravelTimeForBall;
 
+/**
+ * This controls whether the right paddle reacts on scrolls
+ * of the scrollView/tableView.
+ */
+@property (nonatomic, assign) BOOL interactive;
+
 @end

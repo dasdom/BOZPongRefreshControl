@@ -11,21 +11,23 @@
 
 #import "BOZPongRefreshControl.h"
 
-#define REFRESH_CONTROL_HEIGHT 65.0f
-#define HALF_REFRESH_CONTROL_HEIGHT (REFRESH_CONTROL_HEIGHT / 2.0f)
-
 #define DEFAULT_FOREGROUND_COLOR [UIColor whiteColor]
 #define DEFAULT_BACKGROUND_COLOR [UIColor colorWithWhite:0.10f alpha:1.0f]
 
-#define DEFAULT_TOTAL_HORIZONTAL_TRAVEL_TIME_FOR_BALL 1.5f
 
-#define TRANSITION_ANIMATION_DURATION 0.2f
+static const CGFloat kRefreshControlHeight = 65.0f;
+static const CGFloat kHalfRefreshControlHeight = kRefreshControlHeight/2.0f;
 
-typedef enum {
+static const CGFloat kDefaultTotalHorizontalBallTravelTime = 1.5f;
+
+static const CGFloat kTransitionAnimationDuration = 0.2f;
+
+
+typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
     BOZPongRefreshControlStateIdle = 0,
     BOZPongRefreshControlStateRefreshing = 1,
     BOZPongRefreshControlStateResetting = 2
-} BOZPongRefreshControlState;
+};
 
 @interface BOZPongRefreshControl() {
     BOZPongRefreshControlState state;
@@ -89,7 +91,8 @@ typedef enum {
     }
     
     //Initialized height to 0 to hide it
-    BOZPongRefreshControl* pongRefreshControl = [[BOZPongRefreshControl alloc] initWithFrame:CGRectMake(0.0f, 0.0f, scrollView.frame.size.width, 0.0f)
+    CGRect frame = CGRectMake(0.0f, 0.0f, scrollView.frame.size.width, 0.0f);
+    BOZPongRefreshControl* pongRefreshControl = [[BOZPongRefreshControl alloc] initWithFrame:frame
                                                                                andScrollView:scrollView
                                                                             andRefreshTarget:refreshTarget
                                                                             andRefreshAction:refreshAction];
@@ -121,6 +124,8 @@ typedef enum {
     if (self) {
         self.clipsToBounds = YES;
         
+        self.interactive = NO;
+        
         self.scrollView = scrollView;
         self.refreshTarget = refreshTarget;
         self.refreshAction = refreshAction;
@@ -149,15 +154,19 @@ typedef enum {
 
 - (void)setUpGameView
 {
-    gameView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, REFRESH_CONTROL_HEIGHT)];
+    gameView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, kRefreshControlHeight)];
     gameView.backgroundColor = [UIColor clearColor];
     [self addSubview:gameView];
 }
 
 - (void)setUpGamePieceIdleOrigins
 {
-    leftPaddleIdleOrigin = CGPointMake(gameView.frame.size.width * 0.10f, gameView.frame.size.height);
-    rightPaddleIdleOrigin = CGPointMake(gameView.frame.size.width * 0.90f, gameView.frame.size.height);
+    CGFloat paddlePositionOffsetFactor = 0.25f;
+    if (_interactive) {
+        paddlePositionOffsetFactor = 0.1f;
+    }
+    leftPaddleIdleOrigin = CGPointMake(gameView.frame.size.width * paddlePositionOffsetFactor, gameView.frame.size.height);
+    rightPaddleIdleOrigin = CGPointMake(gameView.frame.size.width * (1.0f - paddlePositionOffsetFactor), gameView.frame.size.height);
     ballIdleOrigin = CGPointMake(gameView.frame.size.width * 0.50f, 0.0f);
 }
 
@@ -177,11 +186,13 @@ typedef enum {
 
 - (void)setUpBall
 {
+    [ballView removeFromSuperview];
+    
     ballView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 3.0f, 3.0f)];
     ballView.center = ballIdleOrigin;
     ballView.backgroundColor = self.foregroundColor;
     
-    self.totalHorizontalTravelTimeForBall = DEFAULT_TOTAL_HORIZONTAL_TRAVEL_TIME_FOR_BALL;
+    self.totalHorizontalTravelTimeForBall = _interactive ? kDefaultTotalHorizontalBallTravelTime : kDefaultTotalHorizontalBallTravelTime/2.0f;
     
     [gameView addSubview:ballView];
 }
@@ -213,13 +224,15 @@ typedef enum {
     [self offsetGameViewBy:rawOffset];
     
     if(state == BOZPongRefreshControlStateIdle) {
-        CGFloat ballAndPaddlesOffset = MIN(rawOffset / 2.0f, HALF_REFRESH_CONTROL_HEIGHT);
+        CGFloat ballAndPaddlesOffset = MIN(rawOffset / 2.0f, kHalfRefreshControlHeight);
         
         [self offsetBallAndPaddlesBy:ballAndPaddlesOffset];
         [self rotatePaddlesAccordingToOffset:ballAndPaddlesOffset];
     }
     
-    rightPaddleView.center = CGPointMake(rightPaddleView.center.x, -2*(124+self.scrollView.contentOffset.y));
+    if (_interactive) {
+        rightPaddleView.center = CGPointMake(rightPaddleView.center.x, -2*(124+self.scrollView.contentOffset.y));
+    }
 }
 
 - (CGFloat)distanceScrolled
@@ -231,7 +244,7 @@ typedef enum {
 {
     CGFloat offsetConsideringState = offset;
     if(state != BOZPongRefreshControlStateIdle) {
-        offsetConsideringState += REFRESH_CONTROL_HEIGHT;
+        offsetConsideringState += kRefreshControlHeight;
     }
     
     [self setHeightAndOffsetOfRefreshControl:offsetConsideringState];
@@ -262,7 +275,7 @@ typedef enum {
 
 - (void)rotatePaddlesAccordingToOffset:(CGFloat)offset
 {
-    CGFloat proportionOfMaxOffset = (offset / HALF_REFRESH_CONTROL_HEIGHT);
+    CGFloat proportionOfMaxOffset = (offset / kHalfRefreshControlHeight);
     CGFloat angleToRotate = M_PI * proportionOfMaxOffset;
     
     leftPaddleView.transform = CGAffineTransformMakeRotation(angleToRotate);
@@ -283,7 +296,7 @@ typedef enum {
 
 - (BOOL)didUserScrollFarEnoughToTriggerRefresh
 {
-    return (-self.distanceScrolled > REFRESH_CONTROL_HEIGHT);
+    return (-self.distanceScrolled > kRefreshControlHeight);
 }
 
 - (void)notifyTargetOfRefreshTrigger
@@ -306,6 +319,8 @@ typedef enum {
 
 - (void)beginLoadingAnimated:(BOOL)animated
 {
+    [self setUpBall];
+    
     if (state != BOZPongRefreshControlStateRefreshing) {
         state = BOZPongRefreshControlStateRefreshing;
 
@@ -318,12 +333,12 @@ typedef enum {
 {
     CGFloat animationDuration = 0.0f;
     if(animated) {
-        animationDuration = TRANSITION_ANIMATION_DURATION;
+        animationDuration = kTransitionAnimationDuration;
     }
     
     [UIView animateWithDuration:animationDuration animations:^(void) {
         UIEdgeInsets newInsets = self.scrollView.contentInset;
-        newInsets.top = originalTopContentInset + REFRESH_CONTROL_HEIGHT;
+        newInsets.top = originalTopContentInset + kRefreshControlHeight;
         self.scrollView.contentInset = newInsets;
     }];
 }
@@ -338,7 +353,7 @@ typedef enum {
     
     state = BOZPongRefreshControlStateResetting;
     
-    [UIView animateWithDuration:TRANSITION_ANIMATION_DURATION animations:^(void)
+    [UIView animateWithDuration:kTransitionAnimationDuration animations:^(void)
      {
          [self resetScrollViewContentInsets];
          [self setHeightAndOffsetOfRefreshControl:0.0f];
@@ -362,7 +377,9 @@ typedef enum {
     [self removeAnimations];
     
     leftPaddleView.center = leftPaddleIdleOrigin;
-//    rightPaddleView.center = rightPaddleIdleOrigin;
+    if (!_interactive) {
+        rightPaddleView.center = rightPaddleIdleOrigin;
+    }
     ballView.center = ballIdleOrigin;
 }
 
@@ -391,9 +408,9 @@ typedef enum {
 - (void)pickRandomStartingBallDestination
 {
     CGFloat destinationX = [self leftPaddleContactX];
-//    if(arc4random() % 2 == 1) {
-//        destinationX = [self rightPaddleContactX];
-//    }
+    if(arc4random() % 2 == 1 && !_interactive) {
+        destinationX = [self rightPaddleContactX];
+    }
     CGFloat destinationY = (float)(arc4random() % (int)gameView.frame.size.height);
     
     ballDestination = CGPointMake(destinationX, destinationY);
@@ -407,12 +424,10 @@ typedef enum {
 
 - (void)determineNextBallDestination
 {
-    if (!CGRectContainsPoint(self.bounds, ballView.center)) {
+    if (!CGRectContainsPoint(self.bounds, ballView.center) && _interactive) {
         [self resetPaddlesAndBall];
         [self startPong];
     }
-    NSLog(@"ball center: %@", NSStringFromCGPoint(ballView.center));
-    NSLog(@"frame: %@", NSStringFromCGRect(self.frame));
     
     CGFloat newBallDestinationX;
     CGFloat newBallDestinationY;
@@ -429,25 +444,21 @@ typedef enum {
         CGFloat verticalDistanceToNextPaddle = fabs(horizontalDistanceToNextPaddle) * ballDirection.y;
         if ([self didBallHitLeftPaddle] || [self didBallHitRightPaddle] || [self didBallHitWall]) {
             newBallDestinationX = ballDestination.x + horizontalDistanceToNextPaddle;
-            newBallDestinationY = ballDestination.y + verticalDistanceToNextPaddle;
         } else {
             newBallDestinationX = ballDestination.x - horizontalDistanceToNextPaddle;
-            newBallDestinationY = ballDestination.y + verticalDistanceToNextPaddle;
         }
+        newBallDestinationY = ballDestination.y + verticalDistanceToNextPaddle;
     } else {
         if ([self didBallHitLeftPaddle] || [self didBallHitRightPaddle] || [self didBallHitWall]) {
             newBallDestinationX = ballDestination.x + horizontalDistanceToNextWall;
-            newBallDestinationY = ballDestination.y + verticalDistanceToNextWall;
         } else {
             newBallDestinationX = ballDestination.x - horizontalDistanceToNextWall;
-            newBallDestinationY = ballDestination.y + verticalDistanceToNextWall;
         }
+        newBallDestinationY = ballDestination.y + verticalDistanceToNextWall;
     }
     
     ballOrigin = ballDestination;
     ballDestination = CGPointMake(newBallDestinationX, newBallDestinationY);
-    NSLog(@"ballOrigin: %@", NSStringFromCGPoint(ballOrigin));
-    NSLog(@"ballDestination: %@", NSStringFromCGPoint(ballDestination));
 }
 
 - (CGPoint)determineReflectedDirectionOfBall
@@ -542,7 +553,7 @@ typedef enum {
     rightPaddleOrigin = rightPaddleDestination;
     leftPaddleDestination = leftPaddleView.center.y + leftPaddleOffset;
     rightPaddleDestination = rightPaddleView.center.y + rightPaddleOffset;
-    
+
     [self capPaddleDestinationsToWalls];
 }
 
@@ -582,7 +593,9 @@ typedef enum {
      {
          ballView.center = ballDestination;
          leftPaddleView.center = CGPointMake(leftPaddleView.center.x, leftPaddleDestination);
-//         rightPaddleView.center = CGPointMake(rightPaddleView.center.x, rightPaddleDestination);
+         if (!_interactive) {
+             rightPaddleView.center = CGPointMake(rightPaddleView.center.x, rightPaddleDestination);
+         }
      }
      completion:^(BOOL finished)
      {
@@ -652,15 +665,15 @@ typedef enum {
 - (void)handleOrientationChange {
     self.frame = CGRectMake(0.0f, 0.0f, self.scrollView.frame.size.width, 0.0f);
     CGFloat gameViewWidthBeforeOrientationChange = gameView.frame.size.width;
-    gameView.frame = CGRectMake(0.0f, 0.0f, self.frame.size.width, REFRESH_CONTROL_HEIGHT);
+    gameView.frame = CGRectMake(0.0f, 0.0f, self.frame.size.width, kRefreshControlHeight);
     
     originalTopContentInset = self.scrollView.contentInset.top;
     
     [self setUpGamePieceIdleOrigins];
     
     if(state == BOZPongRefreshControlStateRefreshing) {
-        originalTopContentInset -= REFRESH_CONTROL_HEIGHT;
-        [self setHeightAndOffsetOfRefreshControl:REFRESH_CONTROL_HEIGHT];
+        originalTopContentInset -= kRefreshControlHeight;
+        [self setHeightAndOffsetOfRefreshControl:kRefreshControlHeight];
         
         [self removeAnimations];
         CGFloat horizontalScaleFactor = gameView.frame.size.width / gameViewWidthBeforeOrientationChange;
