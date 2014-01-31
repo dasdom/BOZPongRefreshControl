@@ -17,7 +17,7 @@
 #define DEFAULT_FOREGROUND_COLOR [UIColor whiteColor]
 #define DEFAULT_BACKGROUND_COLOR [UIColor colorWithWhite:0.10f alpha:1.0f]
 
-#define DEFAULT_TOTAL_HORIZONTAL_TRAVEL_TIME_FOR_BALL 0.75f
+#define DEFAULT_TOTAL_HORIZONTAL_TRAVEL_TIME_FOR_BALL 1.5f
 
 #define TRANSITION_ANIMATION_DURATION 0.2f
 
@@ -156,8 +156,8 @@ typedef enum {
 
 - (void)setUpGamePieceIdleOrigins
 {
-    leftPaddleIdleOrigin = CGPointMake(gameView.frame.size.width * 0.25f, gameView.frame.size.height);
-    rightPaddleIdleOrigin = CGPointMake(gameView.frame.size.width * 0.75f, gameView.frame.size.height);
+    leftPaddleIdleOrigin = CGPointMake(gameView.frame.size.width * 0.10f, gameView.frame.size.height);
+    rightPaddleIdleOrigin = CGPointMake(gameView.frame.size.width * 0.90f, gameView.frame.size.height);
     ballIdleOrigin = CGPointMake(gameView.frame.size.width * 0.50f, 0.0f);
 }
 
@@ -218,6 +218,8 @@ typedef enum {
         [self offsetBallAndPaddlesBy:ballAndPaddlesOffset];
         [self rotatePaddlesAccordingToOffset:ballAndPaddlesOffset];
     }
+    
+    rightPaddleView.center = CGPointMake(rightPaddleView.center.x, -2*(124+self.scrollView.contentOffset.y));
 }
 
 - (CGFloat)distanceScrolled
@@ -360,7 +362,7 @@ typedef enum {
     [self removeAnimations];
     
     leftPaddleView.center = leftPaddleIdleOrigin;
-    rightPaddleView.center = rightPaddleIdleOrigin;
+//    rightPaddleView.center = rightPaddleIdleOrigin;
     ballView.center = ballIdleOrigin;
 }
 
@@ -389,9 +391,9 @@ typedef enum {
 - (void)pickRandomStartingBallDestination
 {
     CGFloat destinationX = [self leftPaddleContactX];
-    if(arc4random() % 2 == 1) {
-        destinationX = [self rightPaddleContactX];
-    }
+//    if(arc4random() % 2 == 1) {
+//        destinationX = [self rightPaddleContactX];
+//    }
     CGFloat destinationY = (float)(arc4random() % (int)gameView.frame.size.height);
     
     ballDestination = CGPointMake(destinationX, destinationY);
@@ -405,6 +407,13 @@ typedef enum {
 
 - (void)determineNextBallDestination
 {
+    if (!CGRectContainsPoint(self.bounds, ballView.center)) {
+        [self resetPaddlesAndBall];
+        [self startPong];
+    }
+    NSLog(@"ball center: %@", NSStringFromCGPoint(ballView.center));
+    NSLog(@"frame: %@", NSStringFromCGRect(self.frame));
+    
     CGFloat newBallDestinationX;
     CGFloat newBallDestinationY;
     
@@ -417,17 +426,28 @@ typedef enum {
     CGFloat horizontalDistanceToNextPaddle = [self calculateHorizontalDistanceFromBallToNextPaddle];
     
     if(fabs(horizontalDistanceToNextPaddle) < fabs(horizontalDistanceToNextWall)) {
-        newBallDestinationX = ballDestination.x + horizontalDistanceToNextPaddle;
-        
         CGFloat verticalDistanceToNextPaddle = fabs(horizontalDistanceToNextPaddle) * ballDirection.y;
-        newBallDestinationY = ballDestination.y + verticalDistanceToNextPaddle;
+        if ([self didBallHitLeftPaddle] || [self didBallHitRightPaddle] || [self didBallHitWall]) {
+            newBallDestinationX = ballDestination.x + horizontalDistanceToNextPaddle;
+            newBallDestinationY = ballDestination.y + verticalDistanceToNextPaddle;
+        } else {
+            newBallDestinationX = ballDestination.x - horizontalDistanceToNextPaddle;
+            newBallDestinationY = ballDestination.y + verticalDistanceToNextPaddle;
+        }
     } else {
-        newBallDestinationX = ballDestination.x + horizontalDistanceToNextWall;
-        newBallDestinationY = ballDestination.y + verticalDistanceToNextWall;
+        if ([self didBallHitLeftPaddle] || [self didBallHitRightPaddle] || [self didBallHitWall]) {
+            newBallDestinationX = ballDestination.x + horizontalDistanceToNextWall;
+            newBallDestinationY = ballDestination.y + verticalDistanceToNextWall;
+        } else {
+            newBallDestinationX = ballDestination.x - horizontalDistanceToNextWall;
+            newBallDestinationY = ballDestination.y + verticalDistanceToNextWall;
+        }
     }
     
     ballOrigin = ballDestination;
     ballDestination = CGPointMake(newBallDestinationX, newBallDestinationY);
+    NSLog(@"ballOrigin: %@", NSStringFromCGPoint(ballOrigin));
+    NSLog(@"ballDestination: %@", NSStringFromCGPoint(ballDestination));
 }
 
 - (CGPoint)determineReflectedDirectionOfBall
@@ -436,10 +456,9 @@ typedef enum {
     
     if([self didBallHitWall]) {
         reflectedBallDirection =  CGPointMake(ballDirection.x, -ballDirection.y);
-    } else if([self didBallHitPaddle]) {
+    } else if([self didBallHitLeftPaddle] || [self didBallReachYPositionOfRightPaddle]) {
         reflectedBallDirection =  CGPointMake(-ballDirection.x, ballDirection.y);
     }
-    
     return reflectedBallDirection;
 }
 
@@ -448,9 +467,19 @@ typedef enum {
     return ([self isFloat:ballDestination.y equalToFloat:[self ceilingContactY]] || [self isFloat:ballDestination.y equalToFloat:[self floorContactY]]);
 }
 
-- (BOOL)didBallHitPaddle
+- (BOOL)didBallHitLeftPaddle
 {
-    return ([self isFloat:ballDestination.x equalToFloat:[self leftPaddleContactX]] || [self isFloat:ballDestination.x equalToFloat:[self rightPaddleContactX]]);
+    return ([self isFloat:ballDestination.x equalToFloat:[self leftPaddleContactX]]);
+}
+
+- (BOOL)didBallHitRightPaddle
+{
+    return [self isFloat:ballDestination.x equalToFloat:[self rightPaddleContactX]] && ballDestination.y < CGRectGetMaxY(rightPaddleView.frame) && ballDestination.y > CGRectGetMinY(rightPaddleView.frame);
+}
+
+- (BOOL)didBallReachYPositionOfRightPaddle
+{
+    return [self isFloat:ballDestination.x equalToFloat:[self rightPaddleContactX]];
 }
 
 - (CGFloat)calculateVerticalDistanceFromBallToNextWall
@@ -513,7 +542,7 @@ typedef enum {
     rightPaddleOrigin = rightPaddleDestination;
     leftPaddleDestination = leftPaddleView.center.y + leftPaddleOffset;
     rightPaddleDestination = rightPaddleView.center.y + rightPaddleOffset;
-
+    
     [self capPaddleDestinationsToWalls];
 }
 
@@ -553,7 +582,7 @@ typedef enum {
      {
          ballView.center = ballDestination;
          leftPaddleView.center = CGPointMake(leftPaddleView.center.x, leftPaddleDestination);
-         rightPaddleView.center = CGPointMake(rightPaddleView.center.x, rightPaddleDestination);
+//         rightPaddleView.center = CGPointMake(rightPaddleView.center.x, rightPaddleDestination);
      }
      completion:^(BOOL finished)
      {
