@@ -133,7 +133,7 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
         originalTopContentInset = scrollView.contentInset.top;
         
         [self setUpGameView];
-        [self setUpGamePieceIdleOrigins];
+//        [self setUpGamePieceIdleOrigins];
         [self setUpPaddles];
         [self setUpBall];
         
@@ -320,7 +320,8 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
 - (void)beginLoadingAnimated:(BOOL)animated
 {
     [self setUpBall];
-    
+    [self setUpGamePieceIdleOrigins];
+
     if (state != BOZPongRefreshControlStateRefreshing) {
         state = BOZPongRefreshControlStateRefreshing;
 

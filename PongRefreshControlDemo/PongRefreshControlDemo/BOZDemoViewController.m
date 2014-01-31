@@ -28,6 +28,7 @@
     self.pongRefreshControl = [BOZPongRefreshControl attachToTableView:self.tableView
                                                      withRefreshTarget:self
                                                       andRefreshAction:@selector(refreshTriggered)];
+    self.pongRefreshControl.interactive = YES;
 }
 
 - (void)viewWillDisappear:(BOOL)animated
