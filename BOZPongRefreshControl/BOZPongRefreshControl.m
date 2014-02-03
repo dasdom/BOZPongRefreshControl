@@ -74,7 +74,16 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
                           withRefreshTarget:(id)refreshTarget
                            andRefreshAction:(SEL)refreshAction
 {
+        return [self attachToTableView:tableView interactive:NO withRefreshTarget:refreshTarget andRefreshAction:refreshAction];
+}
+
++ (BOZPongRefreshControl*)attachToTableView:(UITableView*)tableView
+                                interactive:(BOOL)interactive
+                          withRefreshTarget:(id)refreshTarget
+                           andRefreshAction:(SEL)refreshAction
+{
     return [self attachToScrollView:tableView
+                        interactive:YES
                   withRefreshTarget:refreshTarget
                    andRefreshAction:refreshAction];
 }
@@ -82,6 +91,14 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
 #pragma mark UIScrollView
 
 + (BOZPongRefreshControl*)attachToScrollView:(UIScrollView*)scrollView
+                           withRefreshTarget:(id)refreshTarget
+                            andRefreshAction:(SEL)refreshAction
+{
+    return [self attachToScrollView:scrollView interactive:NO withRefreshTarget:refreshTarget andRefreshAction:refreshAction];
+}
+
++ (BOZPongRefreshControl*)attachToScrollView:(UIScrollView*)scrollView
+                                 interactive:(BOOL)interactive
                            withRefreshTarget:(id)refreshTarget
                             andRefreshAction:(SEL)refreshAction
 {
@@ -94,13 +111,15 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
     CGRect frame = CGRectMake(0.0f, 0.0f, scrollView.frame.size.width, 0.0f);
     BOZPongRefreshControl* pongRefreshControl = [[BOZPongRefreshControl alloc] initWithFrame:frame
                                                                                andScrollView:scrollView
+                                                                                 interactive:interactive
                                                                             andRefreshTarget:refreshTarget
                                                                             andRefreshAction:refreshAction];
-
+    
     [scrollView addSubview:pongRefreshControl];
-
+    
     return pongRefreshControl;
 }
+
 
 + (BOZPongRefreshControl*)findPongRefreshControlInScrollView:(UIScrollView*)scrollView
 {
@@ -117,6 +136,7 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
 
 - (id)initWithFrame:(CGRect)frame
       andScrollView:(UIScrollView*)scrollView
+        interactive:(BOOL)interactive
    andRefreshTarget:(id)refreshTarget
    andRefreshAction:(SEL)refreshAction
 {
@@ -124,7 +144,7 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
     if (self) {
         self.clipsToBounds = YES;
         
-        self.interactive = NO;
+        self.interactive = interactive;
         
         self.scrollView = scrollView;
         self.refreshTarget = refreshTarget;
@@ -133,7 +153,7 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
         originalTopContentInset = scrollView.contentInset.top;
         
         [self setUpGameView];
-//        [self setUpGamePieceIdleOrigins];
+        [self setUpGamePieceIdleOrigins];
         [self setUpPaddles];
         [self setUpBall];
         
@@ -319,9 +339,6 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
 
 - (void)beginLoadingAnimated:(BOOL)animated
 {
-    [self setUpBall];
-    [self setUpGamePieceIdleOrigins];
-
     if (state != BOZPongRefreshControlStateRefreshing) {
         state = BOZPongRefreshControlStateRefreshing;
 

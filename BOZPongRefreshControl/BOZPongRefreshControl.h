@@ -23,6 +23,10 @@
                           withRefreshTarget:(id)refreshTarget
                            andRefreshAction:(SEL)refreshAction;
 
++ (BOZPongRefreshControl*)attachToTableView:(UITableView*)tableView
+                                interactive:(BOOL)interactive
+                          withRefreshTarget:(id)refreshTarget
+                           andRefreshAction:(SEL)refreshAction;
 /**
  *  Call this function to attach a pong refresh control to
  *  a UIScrollView. Keep in mind that it does this by adding
@@ -34,6 +38,11 @@
  *  on the refreshTarget when the user triggers a refresh.
  */
 + (BOZPongRefreshControl*)attachToScrollView:(UIScrollView*)scrollView
+                           withRefreshTarget:(id)refreshTarget
+                            andRefreshAction:(SEL)refreshAction;
+
++ (BOZPongRefreshControl*)attachToScrollView:(UIScrollView*)scrollView
+                                 interactive:(BOOL)interactive
                            withRefreshTarget:(id)refreshTarget
                             andRefreshAction:(SEL)refreshAction;
 

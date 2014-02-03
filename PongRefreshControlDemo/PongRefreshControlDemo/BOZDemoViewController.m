@@ -26,9 +26,9 @@
 - (void)viewDidLayoutSubviews
 {
     self.pongRefreshControl = [BOZPongRefreshControl attachToTableView:self.tableView
+                                                           interactive:YES
                                                      withRefreshTarget:self
                                                       andRefreshAction:@selector(refreshTriggered)];
-    self.pongRefreshControl.interactive = YES;
 }
 
 - (void)viewWillDisappear:(BOOL)animated
