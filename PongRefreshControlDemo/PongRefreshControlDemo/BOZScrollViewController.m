@@ -59,6 +59,7 @@
 - (void)viewDidLayoutSubviews
 {
     self.pongRefreshControl = [BOZPongRefreshControl attachToScrollView:self.scrollView
+                                                            interactive:YES
                                                       withRefreshTarget:self
                                                        andRefreshAction:@selector(refreshTriggered)];
     self.pongRefreshControl.backgroundColor = [UIColor colorWithRed:0.000f green:0.132f blue:0.298f alpha:1.0f];

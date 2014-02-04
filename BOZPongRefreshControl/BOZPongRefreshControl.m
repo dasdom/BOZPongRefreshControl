@@ -243,15 +243,15 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
     
     [self offsetGameViewBy:rawOffset];
     
+    if (_interactive) {
+        rightPaddleView.center = CGPointMake(rightPaddleView.center.x, 2.0f*rawOffset+10.0f);
+    }
+    
     if(state == BOZPongRefreshControlStateIdle) {
         CGFloat ballAndPaddlesOffset = MIN(rawOffset / 2.0f, kHalfRefreshControlHeight);
         
         [self offsetBallAndPaddlesBy:ballAndPaddlesOffset];
         [self rotatePaddlesAccordingToOffset:ballAndPaddlesOffset];
-    }
-    
-    if (_interactive) {
-        rightPaddleView.center = CGPointMake(rightPaddleView.center.x, -2*(124+self.scrollView.contentOffset.y));
     }
 }
 
