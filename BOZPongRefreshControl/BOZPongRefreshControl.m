@@ -8,6 +8,11 @@
 //  Version 1.0.0
 //  https://www.github.com/boztalay/BOZPongRefreshControl
 //
+//
+//  Interactivity contributed by Dominik Hauser
+//  https://github.com/dasdom/BOZPongRefreshControl
+//
+//
 
 #import "BOZPongRefreshControl.h"
 
