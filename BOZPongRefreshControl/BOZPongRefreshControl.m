@@ -16,10 +16,6 @@
 
 #import "BOZPongRefreshControl.h"
 
-#define DEFAULT_FOREGROUND_COLOR [UIColor whiteColor]
-#define DEFAULT_BACKGROUND_COLOR [UIColor colorWithWhite:0.10f alpha:1.0f]
-
-
 static const CGFloat kRefreshControlHeight = 65.0f;
 static const CGFloat kHalfRefreshControlHeight = kRefreshControlHeight/2.0f;
 
@@ -30,8 +26,8 @@ static const CGFloat kTransitionAnimationDuration = 0.2f;
 
 typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
     BOZPongRefreshControlStateIdle = 0,
-    BOZPongRefreshControlStateRefreshing = 1,
-    BOZPongRefreshControlStateResetting = 2
+    BOZPongRefreshControlStateRefreshing,
+    BOZPongRefreshControlStateResetting
 };
 
 @interface BOZPongRefreshControl() {
@@ -164,8 +160,8 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
         
         state = BOZPongRefreshControlStateIdle;
         
-        self.foregroundColor = DEFAULT_FOREGROUND_COLOR;
-        self.backgroundColor = DEFAULT_BACKGROUND_COLOR;
+        self.foregroundColor = [self defaultForegroundColor];
+        self.backgroundColor = [self defaultBackgroundColor];
         
         [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
         [[NSNotificationCenter defaultCenter] addObserver:self
@@ -419,6 +415,9 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
 
 - (void)startPong
 {
+    leftPaddleView.transform = CGAffineTransformMakeRotation(0);
+    rightPaddleView.transform = CGAffineTransformMakeRotation(0);
+    
     ballOrigin = ballView.center;
     leftPaddleOrigin = leftPaddleIdleOrigin.y;
     rightPaddleOrigin = rightPaddleIdleOrigin.y;
@@ -761,6 +760,15 @@ typedef NS_ENUM(NSUInteger, BOZPongRefreshControlState) {
     static CGFloat ellipsis = 0.01f;
     
     return (fabsf(float1 - float2) < ellipsis);
+}
+
+#pragma mark - Colors
+- (UIColor*)defaultBackgroundColor {
+    return [UIColor colorWithWhite:0.10f alpha:1.0f];
+}
+
+- (UIColor*)defaultForegroundColor {
+    return [UIColor whiteColor];
 }
 
 @end
